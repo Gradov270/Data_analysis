@@ -1,0 +1,95 @@
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.cluster import KMeans
+from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
+from sklearn.preprocessing import StandardScaler
+from scipy.cluster.hierarchy import dendrogram, linkage
+import itertools
+
+df.columns = [i.lower() for i in df.columns]
+
+df.info()
+
+df.duplicated().sum() #число дубликатов
+
+df[['gender', 'near_location', 'phone', 'age', 'avg_additional_charges_total', 'churn']].duplicated().sum() #усиленный поиск дубликатов
+
+for i in df.columns:
+    print(df[i].value_counts())
+    
+df.describe() #описание данных
+
+df.groupby('churn').agg({'mean'}) #группировка по churn и расчет средний значений признаков
+
+df_churn_0 = df.query("churn == 0").hist(figsize=(10,10)) #гистограмма признаков, когда churn = 0
+df_churn_0 = df.query("churn == 0").hist(figsize=(10,10), bins=20) 
+
+df_churn_1 = df.query("churn == 1").hist(figsize=(10,10)) #гистограмма признаков, когда churn = 1
+df_churn_1 = df.query("churn == 1").hist(figsize=(10,10), bins=20) #ушли
+
+corrs = df.corr()
+plt.figure(figsize=(16, 6))
+sns.heatmap(corrs, vmin=-1, vmax=1, annot=True)
+plt.show()
+
+X = df.drop('churn', axis=1)
+y = df['churn']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state=0)
+
+models = [
+    LogisticRegression(random_state=0, solver='liblinear'),
+    RandomForestClassifier(random_state=0)
+]
+
+def make_prediction(m, X_train, y_train, X_test, y_test):
+    model = m
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    print(
+        'Accuracy:{:.2f} Precision:{:.2f} Recall:{:.2f} Roc_auc_score:{:.2f} '.format(
+            accuracy_score(y_test, y_pred),
+            precision_score(y_test, y_pred),
+            recall_score(y_test, y_pred),
+            roc_auc_score(y_test, y_pred)
+            
+        )
+    )
+    
+for i in models:
+    print(i)
+    make_prediction(i, X_train, y_train, X_test, y_test)
+    
+sc = StandardScaler()
+X_sc = sc.fit_transform(X)
+
+linked = linkage(X_sc, method = 'ward')
+plt.figure(figsize=(15, 10))  
+dendrogram(linked, orientation='top')
+plt.title('Матрица расстояний для клиентской базы')
+plt.show()
+
+km = KMeans(n_clusters=5, random_state=0)
+labels = km.fit_predict(X_sc)
+
+df['cluster_km'] = labels
+print(df.drop('churn', axis=1).groupby('cluster_km').agg('mean'))
+
+def show_clusters_on_plot(df, x_name, y_name, cluster_name):
+    plt.figure(figsize=(5, 5))
+    sns.scatterplot(
+        df[x_name], df[y_name], hue=df[cluster_name], palette='Paired'
+    )
+    plt.title('{} vs {}'.format(x_name, y_name))
+    plt.show()
+    
+col_pairs = list(itertools.combinations(df.drop('cluster_km', axis=1).columns, 2))
+for pair in col_pairs:
+    show_clusters_on_plot(df, pair[0], pair[1], 'cluster_km')
+    
+table = df.groupby('cluster_km').agg({'churn':['sum','count']})
+table['ratio'] = round(table.iloc[:, 0]/table.iloc[:, 1], 2)
