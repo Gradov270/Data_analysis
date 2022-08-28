@@ -1,4 +1,2 @@
 # Dashboard_analysis
- In this project, the analysis of user activity on the site "Articles and not only" was carried out, the topics most interesting to people were identified, 
- the history of activity was shown and a summary table was compiled on the combination of topics from the sources of articles to the topics of articles. 
- All the results were designed in the form of a dashboard.
+The purpose of this project is to extract data from the database and build a dashboard based on the data obtained. The data shows the activity of users in relation to articles on the Internet, depending on the topic of the source and the topic of the article. The peak of activity was registered at 18:52 on September 24, 2019 for each topic. The most popular topic of articles is "Money".
